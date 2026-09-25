@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import multer from 'multer';
-import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
@@ -25,16 +24,6 @@ const upload = multer({
   },
 });
 
-// Initialisation de Supabase avec les variables d'environnement
-const supabaseUrl = process.env.supabaseUrl || process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.supabaseKey || process.env.SUPABASE_KEY || process.env.SUPABASE_SECRET_KEY || '';
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Erreur critique : Les variables Supabase sont manquantes.');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 // Middleware de protection par clé API
 const requireApiKey = (req: Request, res: Response, next: NextFunction): void => {
   const key = req.header('x-api-key');
@@ -52,7 +41,7 @@ app.get('/', (_req: Request, res: Response) => {
   res.json({ status: 'AgriPulse AI Backend est opérationnel 🚀' });
 });
 
-// Route principale de diagnostic avec upload d'image
+// Route principale de diagnostic
 app.post(
   '/api/diagnostics',
   requireApiKey,
@@ -75,46 +64,18 @@ app.post(
         return;
       }
 
-      const parsedConfidence = parseFloat(confidence);
-      if (isNaN(parsedConfidence) || parsedConfidence < 0 || parsedConfidence > 1) {
-        res.status(400).json({
-          success: false,
-          error: 'confidence doit être un nombre entre 0 et 1.',
-        });
-        return;
-      }
-
-      // Envoyer l'image vers le bucket Supabase 'plant-images'
-      const fileName = `${Date.now()}-${file.originalname}`;
-      const { error: uploadError } = await supabase.storage
-        .from('plant-images')
-        .upload(fileName, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false,
-        });
-
-      if (uploadError) {
-        res.status(500).json({ success: false, error: uploadError.message });
-        return;
-      }
-
-      // Récupérer l'URL publique de l'image
-      const { data: publicUrlData } = supabase.storage
-        .from('plant-images')
-        .getPublicUrl(fileName);
-
       res.status(200).json({
         success: true,
-        message: 'Diagnostic enregistré et image uploadée avec succès',
+        message: 'Reçu avec succès !',
         data: {
           culture,
           disease,
-          confidence: parsedConfidence,
-          imageUrl: publicUrlData.publicUrl,
+          confidence,
+          fileName: file.originalname,
         },
       });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message || 'Erreur interne du serveur' });
+      res.status(500).json({ success: false, error: error.message || 'Erreur interne' });
     }
   }) as any
 );
@@ -122,3 +83,4 @@ app.post(
 app.listen(port, () => {
   console.log(`Serveur démarré sur le port ${port}`);
 });
+
