@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriPulse AI - Démo Diagnostic</title>
+    <!-- Tailwind CSS pour un design propre et rapide -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-green-50 min-h-screen p-4 flex flex-col items-center justify-center">
+
+    <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-6 space-y-6">
+        <div class="text-center">
+            <h1 class="text-2xl font-bold text-green-700">🌱 AgriPulse AI</h1>
+            <p class="text-sm text-gray-500">Plateforme de diagnostic agricole intelligent</p>
+        </div>
+
+        <form id="diagnosticForm" class="space-y-4">
+            <!-- Clé API -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Clé API</label>
+                <input type="password" id="apiKey" required placeholder="Ta clé API secrète" 
+                    class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+
+            <!-- Culture -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Culture (ex: Tomate)</label>
+                <input type="text" id="culture" required placeholder="Nom de la culture" 
+                    class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+
+            <!-- Maladie -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Maladie détectée (ex: Mildiou)</label>
+                <input type="text" id="disease" required placeholder="Nom de la maladie" 
+                    class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+
+            <!-- Confiance -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Indice de confiance (0 à 1)</label>
+                <input type="number" step="0.01" min="0" max="1" id="confidence" required placeholder="0.95" 
+                    class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+
+            <!-- Image -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Image de la plante</label>
+                <input type="file" id="imageFile" accept="image/jpeg, image/png, image/webp" required 
+                    class="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+            </div>
+
+            <!-- Bouton de soumission -->
+            <button type="submit" id="submitBtn" 
+                class="w-full bg-green-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-green-700 transition duration-200">
+                Lancer le diagnostic
+            </button>
+        </form>
+
+        <!-- Zone de résultat -->
+        <div id="resultContainer" class="hidden mt-4 p-4 rounded-md bg-gray-50 border border-gray-200">
+            <h2 class="font-semibold text-gray-700">Résultat :</h2>
+            <pre id="resultText" class="text-xs text-gray-600 overflow-x-auto mt-2"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://agripulse-ai-mxge.onrender.com/api/diagnostics';
+
+        document.getElementById('diagnosticForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const resultContainer = document.getElementById('resultContainer');
+            const resultText = document.getElementById('resultText');
+
+            btn.textContent = 'Envoi en cours...';
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('culture', document.getElementById('culture').value);
+            formData.append('disease', document.getElementById('disease').value);
+            formData.append('confidence', document.getElementById('confidence').value);
+            formData.append('image', document.getElementById('imageFile').files[0]);
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': document.getElementById('apiKey').value
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                resultContainer.classList.remove('hidden');
+                resultText.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultContainer.classList.remove('hidden');
+                resultText.textContent = 'Erreur de connexion au serveur : ' + error.message;
+            } finally {
+                btn.textContent = 'Lancer le diagnostic';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
