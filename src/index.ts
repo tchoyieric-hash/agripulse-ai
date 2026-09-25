@@ -12,7 +12,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Configuration de Multer avec limites de sécurité
+// Configuration de Multer (stockage en mémoire)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 Mo max
@@ -25,19 +25,27 @@ const upload = multer({
   },
 });
 
-// Initialisation de Supabase avec la clé secrète (jamais exposée côté client)
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseSecretKey);
+// Initialisation de Supabase avec les variables d'environnement
+const supabaseUrl = process.env.supabaseUrl || process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.supabaseKey || process.env.SUPABASE_KEY || process.env.SUPABASE_SECRET_KEY || '';
 
-// Middleware simple de protection par clé API
-function requireApiKey(req: Request, res: Response, next: NextFunction) {
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Erreur critique : Les variables Supabase sont manquantes.');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Middleware de protection par clé API
+const requireApiKey = (req: Request, res: Response, next: NextFunction): void => {
   const key = req.header('x-api-key');
-  if (!key || key !== process.env.API_KEY) {
-    return res.status(401).json({ success: false, error: 'Clé API invalide ou manquante' });
+  const validKey = process.env.API_KEY;
+  
+  if (validKey && key !== validKey) {
+    res.status(401).json({ success: false, error: 'Clé API invalide ou manquante' });
+    return;
   }
   next();
-}
+};
 
 // Route de test
 app.get('/', (_req: Request, res: Response) => {
@@ -48,31 +56,35 @@ app.get('/', (_req: Request, res: Response) => {
 app.post(
   '/api/diagnostics',
   requireApiKey,
-  upload.single('image'),
-  async (req: Request, res: Response) => {
+  upload.single('image') as any,
+  (async (req: Request, res: Response): Promise<void> => {
     try {
       const { culture, disease, confidence } = req.body;
       const file = req.file;
 
       if (!file) {
-        return res.status(400).json({ success: false, error: 'Aucune image fournie' });
+        res.status(400).json({ success: false, error: 'Aucune image fournie' });
+        return;
       }
+
       if (!culture || !disease || confidence === undefined) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
-          error: 'Champs requis manquants : culture, disease, confidence',
+          error: 'Champs requis manquants : culture, disease, confidence.',
         });
+        return;
       }
 
       const parsedConfidence = parseFloat(confidence);
       if (isNaN(parsedConfidence) || parsedConfidence < 0 || parsedConfidence > 1) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
-          error: 'confidence doit être un nombre entre 0 et 1',
+          error: 'confidence doit être un nombre entre 0 et 1.',
         });
+        return;
       }
 
-      // 1. Envoyer l'image vers le bucket Supabase 'plant-images'
+      // Envoyer l'image vers le bucket Supabase 'plant-images'
       const fileName = `${Date.now()}-${file.originalname}`;
       const { error: uploadError } = await supabase.storage
         .from('plant-images')
@@ -81,40 +93,32 @@ app.post(
           upsert: false,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        res.status(500).json({ success: false, error: uploadError.message });
+        return;
+      }
 
-      // 2. Récupérer l'URL publique de l'image
-      const { data: { publicUrl } } = supabase.storage
+      // Récupérer l'URL publique de l'image
+      const { data: publicUrlData } = supabase.storage
         .from('plant-images')
         .getPublicUrl(fileName);
 
-      // 3. Insérer les données dans la table 'diagnostics'
-      const { data: insertData, error: insertError } = await supabase
-        .from('diagnostics')
-        .insert([{ culture, disease, confidence: parsedConfidence, image_url: publicUrl }]);
-
-      if (insertError) throw insertError;
-
-      res.status(201).json({
+      res.status(200).json({
         success: true,
-        message: 'Diagnostic et image enregistrés avec succès',
-        imageUrl: publicUrl,
-        data: insertData,
+        message: 'Diagnostic enregistré et image uploadée avec succès',
+        data: {
+          culture,
+          disease,
+          confidence: parsedConfidence,
+          imageUrl: publicUrlData.publicUrl,
+        },
       });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message || 'Erreur interne du serveur' });
     }
-  }
+  }) as any
 );
 
-// Gestion d'erreur Multer (fichier trop gros, mauvais format)
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  if (err) {
-    return res.status(400).json({ success: false, error: err.message });
-  }
-  _next();
-});
-
 app.listen(port, () => {
-  console.log(`Serveur AgriPulse AI en écoute sur le port ${port}`);
+  console.log(`Serveur démarré sur le port ${port}`);
 });
