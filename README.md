@@ -1,11 +1,30 @@
-# AgriPulse AI
-IA pour la résilience agricole et la sécurité alimentaire.
+# AgriPulse AI 🌾🤖
+
+AgriPulse AI is an AI-powered agricultural diagnostic Minimum Viable Product (MVP) designed to help farmers and agronomists quickly identify crop issues, analyze agricultural data, and receive actionable insights through an intuitive interface.
 
 ---
 
-### 🚨 FOR SALE / À VENDRE ($150)
-The complete source code and rights for **AgriPulse AI** are currently for sale!
-* **Tech Stack:** Node.js, Express (Render), Supabase, HTML/JavaScript (GitHub Pages).
-* **Repository:** [https://github.com/tchoyieric-hash/agripulse-ai](https://github.com/tchoyieric-hash/agripulse-ai)
+## 🚀 Key Features
+* **AI-Driven Diagnostics:** Fast analysis of crop health indicators and symptoms.
+* **Modern Tech Stack:** Lightweight, scalable, and easy to maintain.
+* **Cloud-Ready:** Backend hosted on Render with a robust Supabase database.
+* **Ready-to-Transfer Asset:** Ideal for indie hackers or entrepreneurs looking to acquire a ready-to-market SaaS / micro-utility asset.
 
-Interested in acquiring this MVP? Contact me directly via GitHub or social media!
+---
+
+## 🛠️ Architecture & Tech Stack
+* **Frontend:** HTML5, CSS3, JavaScript (Deployed via GitHub Pages)
+* **Backend:** Node.js, Express (Hosted on Render)
+* **Database & Auth:** Supabase (PostgreSQL)
+
+---
+
+## 📂 Project Structure
+```text
+agripulse-ai/
+├── public/            # Frontend assets (HTML, CSS, JS)
+├── server/            # Backend API (Node.js & Express)
+├── .env.example       # Template for environment variables
+├── package.json       # Dependencies and scripts
+└── README.md          # Project documentation
+
